@@ -64,8 +64,8 @@ namespace TransactionApp.BUSINESS.Concrete
             return new SuccessDataResult<List<UserListDto>>(_mapper.Map<List<UserListDto>>(users), "Users retrieved successfully");
         }
 
-        public async Task<IDataResult<USER>> GetUserByIdAsync(int id)
-        {
+        public async Task<IDataResult<UserDto>> GetUserByIdAsync(int id)
+        {   
             if (id <= 0)
                 throw new ArgumentException("ID must be greater than zero", nameof(id));
 
@@ -73,7 +73,7 @@ namespace TransactionApp.BUSINESS.Concrete
             if (user is null)
                 throw new UserNotFoundException(id.ToString());
 
-            return new SuccessDataResult<USER>(user, "User retrieved successfully");
+            return new SuccessDataResult<UserDto>(_mapper.Map<UserDto>(user), "User retrieved successfully");
         }
 
         public async Task<IResult> UpdateUserAsync(UserUpdateDto userUpdateDto)
