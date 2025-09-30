@@ -18,7 +18,7 @@ namespace TransactionApp.API.Controllers
         /// Get all users
         /// </summary>
         /// <returns>List of users</returns>
-        [HttpGet("GetAllUsers")]
+        [HttpGet]
         public async Task<IActionResult> GetAllUsers()
         {
             var result = await _userService.GetAllUsersAsync();
@@ -35,7 +35,7 @@ namespace TransactionApp.API.Controllers
         /// </summary>
         /// <param name="id"></param>
         /// <returns>User information</returns>
-        [HttpGet]
+        [HttpGet("{id}")]
         public async Task<IActionResult> GetUserById(int id)
         {
             var result = await _userService.GetUserByIdAsync(id);

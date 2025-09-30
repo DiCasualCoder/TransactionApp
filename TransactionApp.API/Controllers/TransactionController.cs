@@ -35,7 +35,7 @@ namespace TransactionApp.API.Controllers
         /// Get all transactions
         /// </summary>
         /// <returns>List of transactions</returns>
-        [HttpGet("GetAllTransactions")]
+        [HttpGet]
         [ProducesResponseType(typeof(List<TransactionFetchDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllTransactions()
         {
@@ -51,7 +51,7 @@ namespace TransactionApp.API.Controllers
         /// Gets the total transaction amount per user
         /// </summary>
         /// <returns>Per User - Total Amount Dictionary</returns>
-        [HttpGet("TotalTransactionAmountPerUser")]
+        [HttpGet("totals/by-user")]
         public async Task<IActionResult> TotalTransactionAmountPerUser()
         {
             var result = await _transactionService.TotalAmountPerUserAsync();
@@ -66,7 +66,7 @@ namespace TransactionApp.API.Controllers
         /// Gets the total transaction amount per transaction type
         /// </summary>
         /// <returns>Per Transaction Type - Total Amount Dictionary</returns>
-        [HttpGet("TotalTransactionAmountPerTransactionType")]
+        [HttpGet("totals/by-type")]
         public async Task<IActionResult> TotalTransactionAmountPerTransactionType()
         {
             var result = await _transactionService.TotalAmountPerTransactionAsync();
@@ -77,8 +77,8 @@ namespace TransactionApp.API.Controllers
             return BadRequest(result);
         }
 
-        [HttpGet("GetHighVolumeTransactions")]
-        public async Task<IActionResult> GetHighVolumeTransactions(decimal highVolumeThreshold)
+        [HttpGet("high-volume")]
+        public async Task<IActionResult> GetHighVolumeTransactions([FromQuery]decimal highVolumeThreshold)
         {
             var result = await _transactionService.GetHighVolumeTransactionsAsync(highVolumeThreshold);
             if (result.Success)
