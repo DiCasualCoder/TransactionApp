@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TransactionApp.BUSINESS.Abstract;
 using TransactionApp.BUSINESS.Concrete;
 using TransactionApp.BUSINESS.MapperConfiguration.AutoMapper;
+using TransactionApp.CORE.Middleware;
 using TransactionApp.DAL.Abstract.EntityFramework;
 using TransactionApp.DAL.Abstract.EntityFramework.Repositories;
 using TransactionApp.DAL.Concrete.EntityFramework;
@@ -39,6 +40,8 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

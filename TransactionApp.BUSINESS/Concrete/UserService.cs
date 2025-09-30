@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using TransactionApp.BUSINESS.Abstract;
+using TransactionApp.CORE.CustomException.TransactionException;
 using TransactionApp.CORE.Utilities.Result.Abstract;
 using TransactionApp.CORE.Utilities.Result.Concrete;
 using TransactionApp.DAL.Abstract.EntityFramework;
@@ -29,112 +30,68 @@ namespace TransactionApp.BUSINESS.Concrete
         /// <returns>The id of the newly created user</returns>
         public async Task<IDataResult<int>> AddUserAsync(UserCreateDto user)
         {
-            try
-            {
-                if (user is null)
-                {
-                    return new ErrorDataResult<int>(nameof(user) + " cannot be null");
-                }
+            if (user is null)
+                throw new ArgumentNullException(nameof(user), "Transaction data cannot be null.");
 
-                var newUser = _mapper.Map<USER>(user);
+            var newUser = _mapper.Map<USER>(user);
 
-                await _userRepository.AddAsync(newUser);
-                await _unitOfWork.CommitAsync();
+            await _userRepository.AddAsync(newUser);
+            await _unitOfWork.CommitAsync();
 
-                return new SuccessDataResult<int>(newUser.Id, "User added successfully");
-            }
-            catch (Exception ex)
-            {
-                //Logging mechanism can be added here
-                return new ErrorDataResult<int>($"Unexpected error: {ex.Message}");
-            }
+            return new SuccessDataResult<int>(newUser.Id, "User added successfully");
         }
 
+        /// <summary>
+        /// Deletes a user by ID
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>Operation result object</returns>
         public async Task<IResult> DeleteUserAsync(int id)
         {
-            try
-            {
-                if (id <= 0)
-                {
-                    return new ErrorResult($"Invalid User ID: {id}");
-                }
+            if (id <= 0)
+                throw new ArgumentException("ID must be greater than zero", nameof(id));
 
-                _userRepository.RemoveById(id);
-                await _unitOfWork.CommitAsync();
 
-                return new SuccessResult($"User with ID {id} deleted successfully");
-            }
-            catch (Exception ex)
-            {
-                //Logging mechanism can be added here
-                return new ErrorResult($"Unexpected error: {ex.Message}");
-            }
+            _userRepository.RemoveById(id);
+            await _unitOfWork.CommitAsync();
+
+            return new SuccessResult($"User with ID {id} deleted successfully");
         }
 
         public async Task<IDataResult<List<UserListDto>>> GetAllUsersAsync()
         {
-            try
-            {
-                var users = await _userRepository.GetAllAsync();
-                return new SuccessDataResult<List<UserListDto>>(_mapper.Map<List<UserListDto>>(users), "Users retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                //Logging mechanism can be added here
-                return new ErrorDataResult<List<UserListDto>>($"Unexpected error: {ex.Message}");
-            }
+            var users = await _userRepository.GetAllAsync();
+            return new SuccessDataResult<List<UserListDto>>(_mapper.Map<List<UserListDto>>(users), "Users retrieved successfully");
         }
 
         public async Task<IDataResult<USER>> GetUserByIdAsync(int id)
         {
-            try
-            {
-                if (id <= 0)
-                {
-                    return new ErrorDataResult<USER>($"Invalid User ID: {id}");
-                }
+            if (id <= 0)
+                throw new ArgumentException("ID must be greater than zero", nameof(id));
 
-                var user = await _userRepository.GetByIdAsync(id);
-                if (user is null)
-                {
-                    return new ErrorDataResult<USER>($"User with ID {id} could not be found");
-                }
+            var user = await _userRepository.GetByIdAsync(id);
+            if (user is null)
+                throw new UserNotFoundException(id.ToString());
 
-                return new SuccessDataResult<USER>(user, "User retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                //Logging mechanism can be added here
-                return new ErrorDataResult<USER>($"Unexpected error: {ex.Message}");
-            }
+            return new SuccessDataResult<USER>(user, "User retrieved successfully");
         }
 
         public async Task<IResult> UpdateUserAsync(UserUpdateDto userUpdateDto)
         {
-            try
-            {
-                if (userUpdateDto is null)
-                {
-                    return new ErrorResult(nameof(userUpdateDto) + " cannot be null");
-                }
+            if (userUpdateDto is null)
+                throw new ArgumentNullException(nameof(userUpdateDto), "Transaction data cannot be null.");
 
-                var existingUser = await _userRepository.GetByIdAsync(userUpdateDto.Id);
-                if (existingUser is null)
-                {
-                    return new ErrorResult($"User with ID {userUpdateDto.Id} could not be found");
-                }
 
-                _mapper.Map(userUpdateDto, existingUser);
-                _userRepository.Update(existingUser);
-                await _unitOfWork.CommitAsync();
+            var existingUser = await _userRepository.GetByIdAsync(userUpdateDto.Id);
+            if (existingUser is null)
+                throw new UserNotFoundException(userUpdateDto.Id.ToString());
 
-                return new SuccessResult("User updated successfully");
-            }
-            catch (Exception ex)
-            {
-                //Logging mechanism can be added here
-                return new ErrorResult($"Unexpected error: {ex.Message}");
-            }
+
+            _mapper.Map(userUpdateDto, existingUser);
+            _userRepository.Update(existingUser);
+            await _unitOfWork.CommitAsync();
+
+            return new SuccessResult("User updated successfully");
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.Extensions.Caching.Memory;
 using TransactionApp.BUSINESS.Abstract;
+using TransactionApp.CORE.CustomException.TransactionException;
 using TransactionApp.CORE.Utilities.Result.Abstract;
 using TransactionApp.CORE.Utilities.Result.Concrete;
 using TransactionApp.DAL.Abstract.EntityFramework;
@@ -37,71 +38,58 @@ namespace TransactionApp.BUSINESS.Concrete
         /// <returns>Newly created transaction ID</returns>
         public async Task<IDataResult<int>> AddTransactionAsync(TransactionAddDto transaction)
         {
-            try
+            if (transaction is null)
+                throw new ArgumentNullException(nameof(transaction), "Transaction data cannot be null.");
+
+            var findUserResult = await _userService.GetUserByIdAsync(transaction.UserId);
+            if (!findUserResult.Success)
+                throw new UserNotFoundException(transaction.UserId.ToString());
+
+            var newTransaction = _mapper.Map<TRANSACTION>(transaction);
+            await _transactionRepository.AddAsync(newTransaction);
+            var detectedChanges = await _unitOfWork.CommitAsync();
+
+            //In case of successful commit, recalculate related cache entries
+            //Or create new cache if data not exists
+            if (detectedChanges > 0)
             {
-                if (transaction is null)
+                //cache hit for total transactions per user
+                if (_cache.TryGetValue(TotalTransactionPerUserCacheKey, out Dictionary<int, decimal> totalTransactionsPerUser))
                 {
-                    return new ErrorDataResult<int>(nameof(transaction) + " cannot be null");
-                }
-
-                var findUserResult = await _userService.GetUserByIdAsync(transaction.UserId);
-                if (!findUserResult.Success)
-                {
-                    return new ErrorDataResult<int>($"User with ID {transaction.UserId} does not exist.");
-                }
-
-                var newTransaction = _mapper.Map<TRANSACTION>(transaction);
-                await _transactionRepository.AddAsync(newTransaction);
-                var detectedChanges = await _unitOfWork.CommitAsync();
-
-                //In case of successful commit, recalculate related cache entries
-                //Or create new cache if data not exists
-                if (detectedChanges > 0)
-                {
-                    //cache hit for total transactions per user
-                    if (_cache.TryGetValue(TotalTransactionPerUserCacheKey, out Dictionary<int, decimal> totalTransactionsPerUser))
+                    if (totalTransactionsPerUser.ContainsKey(transaction.UserId))
                     {
-                        if (totalTransactionsPerUser.ContainsKey(transaction.UserId))
-                        {
-                            totalTransactionsPerUser[transaction.UserId] += transaction.Amount;
-                        }
-                        else
-                        {
-                            totalTransactionsPerUser.Add(transaction.UserId, transaction.Amount);
-                        }
+                        totalTransactionsPerUser[transaction.UserId] += transaction.Amount;
                     }
-                    //cache miss
                     else
                     {
-                        await CreateTotalTransactionsPerUserCache();        
-                    }
-
-                    //cache hit for total transactions per transaction type
-                    if (_cache.TryGetValue(TotalTransactionPerTransactionTypeCacheKey, out Dictionary<string, decimal> totalTransactionsPerTransactionType))
-                    {
-                        if (totalTransactionsPerTransactionType.ContainsKey(transaction.TransactionType.ToString()))
-                        {
-                            totalTransactionsPerTransactionType[transaction.TransactionType.ToString()] += transaction.Amount; 
-                        }
-                        else
-                        {
-                            totalTransactionsPerTransactionType.Add(transaction.TransactionType.ToString(), transaction.Amount);
-                        }
-                    }
-                    //cache miss
-                    else
-                    {
-                        await CreateTotalTransactionsPerTransactionTypeCache();
+                        totalTransactionsPerUser.Add(transaction.UserId, transaction.Amount);
                     }
                 }
+                //cache miss
+                else
+                {
+                    await CreateTotalTransactionsPerUserCache();
+                }
 
-                return new SuccessDataResult<int>(newTransaction.Id, "Transaction added successfully");
+                //cache hit for total transactions per transaction type
+                if (_cache.TryGetValue(TotalTransactionPerTransactionTypeCacheKey, out Dictionary<string, decimal> totalTransactionsPerTransactionType))
+                {
+                    if (totalTransactionsPerTransactionType.ContainsKey(transaction.TransactionType.ToString()))
+                    {
+                        totalTransactionsPerTransactionType[transaction.TransactionType.ToString()] += transaction.Amount;
+                    }
+                    else
+                    {
+                        totalTransactionsPerTransactionType.Add(transaction.TransactionType.ToString(), transaction.Amount);
+                    }
+                }
+                //cache miss
+                else
+                {
+                    await CreateTotalTransactionsPerTransactionTypeCache();
+                }
             }
-            catch (Exception ex)
-            {
-                //Logging mechanism can be added here
-                return new ErrorDataResult<int>($"Unexpected error: {ex.Message}");
-            }
+            return new SuccessDataResult<int>(newTransaction.Id, "Transaction added successfully");
         }
 
         /// <summary>
@@ -110,16 +98,8 @@ namespace TransactionApp.BUSINESS.Concrete
         /// <returns>List of transactions</returns>
         public async Task<IDataResult<List<TransactionFetchDto>>> GetAllTransactionsAsync()
         {
-            try
-            {
-                var transactions = await _transactionRepository.GetAllAsync();
-                return new SuccessDataResult<List<TransactionFetchDto>>( _mapper.Map<List<TransactionFetchDto>>(transactions), "Transactions retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                //Logging mechanism can be added here
-                return new ErrorDataResult<List<TransactionFetchDto>>($"Unexpected error: {ex.Message}");
-            }
+            var transactions = await _transactionRepository.GetAllAsync();
+            return new SuccessDataResult<List<TransactionFetchDto>>(_mapper.Map<List<TransactionFetchDto>>(transactions), "Transactions retrieved successfully");
         }
 
         /// <summary>
@@ -128,22 +108,14 @@ namespace TransactionApp.BUSINESS.Concrete
         /// <returns>Per User - Total Amount Dictionary</returns>
         public async Task<IDataResult<Dictionary<int, decimal>>> TotalAmountPerUser()
         {
-            try
+            //Look for cached data
+            if (_cache.TryGetValue(TotalTransactionPerUserCacheKey, out Dictionary<int, decimal> totalTransactionsPerUser))
             {
-                //Look for cached data
-                if (_cache.TryGetValue(TotalTransactionPerUserCacheKey,out Dictionary<int, decimal> totalTransactionsPerUser))
-                {
-                    return new SuccessDataResult<Dictionary<int, decimal>>(totalTransactionsPerUser, "Total transactions per user successfully retrieved.");
-                }
+                return new SuccessDataResult<Dictionary<int, decimal>>(totalTransactionsPerUser, "Total transactions per user successfully retrieved.");
+            }
 
-                //Cache miss
-                return new SuccessDataResult<Dictionary<int, decimal>>(await CreateTotalTransactionsPerUserCache(), "Total transactions per user calculated");
-            }
-            catch (Exception ex)
-            {
-                //Logging mechanism can be added here
-                return new ErrorDataResult<Dictionary<int, decimal>>($"Unexpected error: {ex.Message}");
-            }
+            //Cache miss
+            return new SuccessDataResult<Dictionary<int, decimal>>(await CreateTotalTransactionsPerUserCache(), "Total transactions per user calculated");
         }
 
         /// <summary>
@@ -152,44 +124,29 @@ namespace TransactionApp.BUSINESS.Concrete
         /// <returns>Per Transaction Type - Total Amount Dictionary</returns>
         public async Task<IDataResult<Dictionary<string, decimal>>> TotalAmountPerTransaction()
         {
-            try
+            //look for cached data
+            if (_cache.TryGetValue(TotalTransactionPerTransactionTypeCacheKey, out Dictionary<string, decimal> totalTransactionsPerTransactionType))
             {
-                //look for cached data
-                if (_cache.TryGetValue(TotalTransactionPerTransactionTypeCacheKey, out Dictionary<string, decimal> totalTransactionsPerTransactionType))
-                {
-                    return new SuccessDataResult<Dictionary<string,decimal>>(totalTransactionsPerTransactionType, "Total transactions per transaction type successfully retrieved");
-                }
+                return new SuccessDataResult<Dictionary<string, decimal>>(totalTransactionsPerTransactionType, "Total transactions per transaction type successfully retrieved");
+            }
 
-                //Cache miss
-                return new SuccessDataResult<Dictionary<string, decimal>>(await CreateTotalTransactionsPerTransactionTypeCache(), "Total transactions per transaction type calculated");
-            }
-            catch (Exception ex)
-            {
-                //Logging mechanism can be added here
-                return new ErrorDataResult<Dictionary<string, decimal>>($"Unexpected error: {ex.Message}");
-            }
+            //Cache miss
+            return new SuccessDataResult<Dictionary<string, decimal>>(await CreateTotalTransactionsPerTransactionTypeCache(), "Total transactions per transaction type calculated");
         }
 
         public async Task<IDataResult<List<TransactionHighVolumeDto>>> GetHighVolumeTransactions(decimal highVolumeThreshold)
         {
-            try
-            {
-                var highVolumeTransactions = (await _transactionRepository
-                    .GetWhereAsync(t => t.Amount > highVolumeThreshold, y => y.User))
-                    .Select(x => new TransactionHighVolumeDto
-                    {
-                        UserName = string.Join(" ", x.User.Name, x.User.Surname),
-                        Amount = x.Amount,
-                        TransactionType = x.TransactionType.ToString(),
-                        CreatedAt = x.CreatedAt
-                    }).ToList();
+            var highVolumeTransactions = (await _transactionRepository
+                .GetWhereAsync(t => t.Amount > highVolumeThreshold, y => y.User))
+                .Select(x => new TransactionHighVolumeDto
+                {
+                    UserName = string.Join(" ", x.User.Name, x.User.Surname),
+                    Amount = x.Amount,
+                    TransactionType = x.TransactionType.ToString(),
+                    CreatedAt = x.CreatedAt
+                }).ToList();
 
-                return new SuccessDataResult<List<TransactionHighVolumeDto>>(highVolumeTransactions, "High volume transactions retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                return new ErrorDataResult<List<TransactionHighVolumeDto>>($"Unexpected error: {ex.Message}");
-            }
+            return new SuccessDataResult<List<TransactionHighVolumeDto>>(highVolumeTransactions, "High volume transactions retrieved successfully");
         }
 
         private async Task<Dictionary<int, decimal>> CreateTotalTransactionsPerUserCache()
@@ -214,7 +171,7 @@ namespace TransactionApp.BUSINESS.Concrete
             var totalTransactionPerType = transactions
                 .GroupBy(t => t.TransactionType)
                 .ToDictionary(g => g.Key.ToString(), g => g.Sum(t => t.Amount));
-            
+
             _cache.Set(TotalTransactionPerTransactionTypeCacheKey, totalTransactionPerType, new MemoryCacheEntryOptions
             {
                 Priority = CacheItemPriority.NeverRemove
@@ -222,7 +179,5 @@ namespace TransactionApp.BUSINESS.Concrete
 
             return totalTransactionPerType;
         }
-
-        
     }
 }
