@@ -75,13 +75,20 @@ namespace TransactionApp.UNIT_TESTS.Services
 
             // Assert
             await act.Should().ThrowAsync<UserNotFoundException>()
-                .WithMessage($"User with ID {transactionDto.UserId} not found.");
+                .WithMessage($"User with ID {transactionDto.UserId} not found");
         }
 
         [Fact]
         public async Task AddTransactionAsync_WithValidTransaction_ReturnsSuccessResult()
         {
             //Arrange
+            var transactions = new List<TRANSACTION>
+            {
+                new TRANSACTION { UserId = 1, Amount = 100m },
+                new TRANSACTION { UserId = 2, Amount = 500m },
+                new TRANSACTION { UserId = 1, Amount = 200m }
+            };
+
             var transactionDto = new TransactionAddDto
             {
                 UserId = 1,
@@ -121,6 +128,10 @@ namespace TransactionApp.UNIT_TESTS.Services
                 .Setup(x => x.CommitAsync())
                 .ReturnsAsync(1);
 
+            _mockTransactionRepo
+                .Setup(x => x.GetAllAsync())
+                .ReturnsAsync(transactions);
+
             //Act
             var result = await _transactionService.AddTransactionAsync(transactionDto);
 
@@ -156,7 +167,7 @@ namespace TransactionApp.UNIT_TESTS.Services
             {
                 { "Debit", 1000m }
             };
-            _cache.Set("TransactionType_TotalTransactions", existingTotalTransactionPerUserCache);
+            _cache.Set("TransactionType_TotalTransactions", existingTotalTransactionPerTypeCache);
 
             var userDto = new UserDto { Id = 1, Name = "John", Surname = "Doe" };
             var successUserResult = new SuccessDataResult<UserDto>(userDto, "User found");
@@ -168,8 +179,8 @@ namespace TransactionApp.UNIT_TESTS.Services
                 .ReturnsAsync(successUserResult);
 
             _mockMapper
-                .Setup(x => x.Map<TransactionAddDto>(transactionDto))
-                .Returns(transactionEntity);
+                .Setup(x => x.Map<TRANSACTION>(transactionEntity))
+                .Returns(transactionDto);
 
             _mockUnitOfWork
                 .Setup(x => x.CommitAsync())
@@ -205,7 +216,7 @@ namespace TransactionApp.UNIT_TESTS.Services
                 .ReturnsAsync(transactions);
 
             //Act
-            var result = await _transactionService.TotalAmountPerUser();
+            var result = await _transactionService.TotalAmountPerUserAsync();
 
             //Assert
             result.Success.Should().BeTrue();
@@ -226,9 +237,9 @@ namespace TransactionApp.UNIT_TESTS.Services
             var user = new USER { Id = 1, Name = "Jane", Surname = "Smith" };
             var transactions = new List<TRANSACTION>
             {
-                new TRANSACTION { Amount = 500m, UserId = 1, TransactionType = TransactionTypeEnum.Debit },
-                new TRANSACTION { Amount = 1500m, UserId = 1, TransactionType = TransactionTypeEnum.Credit },
-                new TRANSACTION { Amount = 2000m, UserId = 1, TransactionType = TransactionTypeEnum.Debit }
+                new TRANSACTION { Amount = 500m, UserId = 1, TransactionType = TransactionTypeEnum.Debit, User=user },
+                new TRANSACTION { Amount = 1500m, UserId = 1, TransactionType = TransactionTypeEnum.Credit, User=user },
+                new TRANSACTION { Amount = 2000m, UserId = 1, TransactionType = TransactionTypeEnum.Debit, User=user }
             };
 
             _mockTransactionRepo
@@ -238,7 +249,7 @@ namespace TransactionApp.UNIT_TESTS.Services
                 .ReturnsAsync(transactions.Where(t => t.Amount > threshold).ToList());
 
             //Act
-            var result = await _transactionService.GetHighVolumeTransactions(threshold);
+            var result = await _transactionService.GetHighVolumeTransactionsAsync(threshold);
 
             //Assert
             result.Success.Should().BeTrue();
