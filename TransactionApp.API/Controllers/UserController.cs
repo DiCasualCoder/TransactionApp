@@ -35,7 +35,7 @@ namespace TransactionApp.API.Controllers
         /// </summary>
         /// <param name="id"></param>
         /// <returns>User information</returns>
-        [HttpGet("GetUserById")]
+        [HttpGet]
         public async Task<IActionResult> GetUserById(int id)
         {
             var result = await _userService.GetUserByIdAsync(id);
@@ -51,7 +51,7 @@ namespace TransactionApp.API.Controllers
         /// </summary>
         /// <param name="userCreateDto"></param>
         /// <returns>Created user</returns>
-        [HttpPost("AddUser")]
+        [HttpPost]
         public async Task<IActionResult> AddUser([FromBody] UserCreateDto userCreateDto)
         {
             var result = await _userService.AddUserAsync(userCreateDto);

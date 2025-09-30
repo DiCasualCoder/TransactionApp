@@ -36,7 +36,7 @@ namespace TransactionApp.API.Controllers
         /// </summary>
         /// <param name="transactionAddDto"></param>
         /// <returns>Created transaction ID</returns>
-        [HttpPost("AddTransaction")]
+        [HttpPost]
         public async Task<IActionResult> AddTransaction([FromBody] TransactionAddDto transactionAddDto)
         {
             var result = await _transactionService.AddTransactionAsync(transactionAddDto);
