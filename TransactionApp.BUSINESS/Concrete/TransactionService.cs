@@ -106,7 +106,7 @@ namespace TransactionApp.BUSINESS.Concrete
         /// Returns total transaction amounts for each user
         /// </summary>
         /// <returns>Per User - Total Amount Dictionary</returns>
-        public async Task<IDataResult<Dictionary<int, decimal>>> TotalAmountPerUser()
+        public async Task<IDataResult<Dictionary<int, decimal>>> TotalAmountPerUserAsync()
         {
             //Look for cached data
             if (_cache.TryGetValue(TotalTransactionPerUserCacheKey, out Dictionary<int, decimal> totalTransactionsPerUser))
@@ -122,7 +122,7 @@ namespace TransactionApp.BUSINESS.Concrete
         /// Returns total transaction amounts per transaction type
         /// </summary>
         /// <returns>Per Transaction Type - Total Amount Dictionary</returns>
-        public async Task<IDataResult<Dictionary<string, decimal>>> TotalAmountPerTransaction()
+        public async Task<IDataResult<Dictionary<string, decimal>>> TotalAmountPerTransactionAsync()
         {
             //look for cached data
             if (_cache.TryGetValue(TotalTransactionPerTransactionTypeCacheKey, out Dictionary<string, decimal> totalTransactionsPerTransactionType))
@@ -134,7 +134,7 @@ namespace TransactionApp.BUSINESS.Concrete
             return new SuccessDataResult<Dictionary<string, decimal>>(await CreateTotalTransactionsPerTransactionTypeCache(), "Total transactions per transaction type calculated");
         }
 
-        public async Task<IDataResult<List<TransactionHighVolumeDto>>> GetHighVolumeTransactions(decimal highVolumeThreshold)
+        public async Task<IDataResult<List<TransactionHighVolumeDto>>> GetHighVolumeTransactionsAsync(decimal highVolumeThreshold)
         {
             var highVolumeTransactions = (await _transactionRepository
                 .GetWhereAsync(t => t.Amount > highVolumeThreshold, y => y.User))

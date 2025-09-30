@@ -16,22 +16,6 @@ namespace TransactionApp.API.Controllers
         }
 
         /// <summary>
-        /// Get all transactions
-        /// </summary>
-        /// <returns>List of transactions</returns>
-        [HttpGet("GetAllTransactions")]
-        [ProducesResponseType(typeof(List<TransactionFetchDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetAllTransactions()
-        {
-            var result = await _transactionService.GetAllTransactionsAsync();
-            if (result.Success)
-            {
-                return Ok(result.Data);
-            }
-            return BadRequest(result);
-        }
-
-        /// <summary>
         /// Create a new transaction
         /// </summary>
         /// <param name="transactionAddDto"></param>
@@ -48,13 +32,29 @@ namespace TransactionApp.API.Controllers
         }
 
         /// <summary>
+        /// Get all transactions
+        /// </summary>
+        /// <returns>List of transactions</returns>
+        [HttpGet("GetAllTransactions")]
+        [ProducesResponseType(typeof(List<TransactionFetchDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllTransactions()
+        {
+            var result = await _transactionService.GetAllTransactionsAsync();
+            if (result.Success)
+            {
+                return Ok(result.Data);
+            }
+            return BadRequest(result);
+        }
+
+        /// <summary>
         /// Gets the total transaction amount per user
         /// </summary>
         /// <returns>Per User - Total Amount Dictionary</returns>
         [HttpGet("TotalTransactionAmountPerUser")]
         public async Task<IActionResult> TotalTransactionAmountPerUser()
         {
-            var result = await _transactionService.TotalAmountPerUser();
+            var result = await _transactionService.TotalAmountPerUserAsync();
             if (result.Success)
             {
                 return Ok(result.Data);
@@ -69,7 +69,7 @@ namespace TransactionApp.API.Controllers
         [HttpGet("TotalTransactionAmountPerTransactionType")]
         public async Task<IActionResult> TotalTransactionAmountPerTransactionType()
         {
-            var result = await _transactionService.TotalAmountPerTransaction();
+            var result = await _transactionService.TotalAmountPerTransactionAsync();
             if (result.Success)
             {
                 return Ok(result.Data);
@@ -80,7 +80,7 @@ namespace TransactionApp.API.Controllers
         [HttpGet("GetHighVolumeTransactions")]
         public async Task<IActionResult> GetHighVolumeTransactions(decimal highVolumeThreshold)
         {
-            var result = await _transactionService.GetHighVolumeTransactions(highVolumeThreshold);
+            var result = await _transactionService.GetHighVolumeTransactionsAsync(highVolumeThreshold);
             if (result.Success)
             {
                 return Ok(result.Data);

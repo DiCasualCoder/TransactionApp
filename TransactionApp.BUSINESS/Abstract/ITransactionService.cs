@@ -9,11 +9,11 @@ namespace TransactionApp.BUSINESS.Abstract
         
         Task<IDataResult<int>> AddTransactionAsync(TransactionAddDto transaction);
 
-        Task<IDataResult<Dictionary<int, decimal>>> TotalAmountPerUser();
+        Task<IDataResult<Dictionary<int, decimal>>> TotalAmountPerUserAsync();
 
-        Task<IDataResult<Dictionary<string, decimal>>> TotalAmountPerTransaction();
+        Task<IDataResult<Dictionary<string, decimal>>> TotalAmountPerTransactionAsync();
 
-        Task<IDataResult<List<TransactionHighVolumeDto>>> GetHighVolumeTransactions(decimal highVolumeThreshold);
+        Task<IDataResult<List<TransactionHighVolumeDto>>> GetHighVolumeTransactionsAsync(decimal highVolumeThreshold);
 
     }
 }
