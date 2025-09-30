@@ -53,41 +53,17 @@ namespace TransactionApp.BUSINESS.Concrete
             //Or create new cache if data not exists
             if (detectedChanges > 0)
             {
-                //cache hit for total transactions per user
-                if (_cache.TryGetValue(TotalTransactionPerUserCacheKey, out Dictionary<int, decimal> totalTransactionsPerUser))
-                {
-                    if (totalTransactionsPerUser.ContainsKey(transaction.UserId))
-                    {
-                        totalTransactionsPerUser[transaction.UserId] += transaction.Amount;
-                    }
-                    else
-                    {
-                        totalTransactionsPerUser.Add(transaction.UserId, transaction.Amount);
-                    }
-                }
-                //cache miss
-                else
-                {
-                    await CreateTotalTransactionsPerUserCache();
-                }
+                await UpdateOrCreateCacheAsync<int>(
+                    cacheKey: TotalTransactionPerUserCacheKey,
+                    key: transaction.UserId,
+                    amountToAdd: transaction.Amount,
+                    createCacheFunc: CreateTotalTransactionsPerUserCache);
 
-                //cache hit for total transactions per transaction type
-                if (_cache.TryGetValue(TotalTransactionPerTransactionTypeCacheKey, out Dictionary<string, decimal> totalTransactionsPerTransactionType))
-                {
-                    if (totalTransactionsPerTransactionType.ContainsKey(transaction.TransactionType.ToString()))
-                    {
-                        totalTransactionsPerTransactionType[transaction.TransactionType.ToString()] += transaction.Amount;
-                    }
-                    else
-                    {
-                        totalTransactionsPerTransactionType.Add(transaction.TransactionType.ToString(), transaction.Amount);
-                    }
-                }
-                //cache miss
-                else
-                {
-                    await CreateTotalTransactionsPerTransactionTypeCache();
-                }
+                await UpdateOrCreateCacheAsync<string>(
+                    cacheKey: TotalTransactionPerTransactionTypeCacheKey,
+                    key: transaction.TransactionType.ToString(),
+                    amountToAdd: transaction.Amount,
+                    createCacheFunc: CreateTotalTransactionsPerTransactionTypeCache);
             }
             return new SuccessDataResult<int>(newTransaction.Id, "Transaction added successfully");
         }
@@ -178,6 +154,33 @@ namespace TransactionApp.BUSINESS.Concrete
             });
 
             return totalTransactionPerType;
+        }
+
+        private async Task UpdateOrCreateCacheAsync<TKey>(
+            string cacheKey,
+            TKey key,
+            decimal amountToAdd,
+            Func<Task> createCacheFunc)
+        {
+            //If cache exists
+            //Update the value or create new key-value pair
+            if (_cache.TryGetValue(cacheKey, out Dictionary<TKey, decimal> cacheData))
+            {
+                if (cacheData.ContainsKey(key))
+                {
+                    cacheData[key] += amountToAdd;
+                }
+                else
+                {
+                    cacheData.Add(key, amountToAdd);
+                }
+            }
+            //If cache does not exist
+            //Create cache
+            else
+            {
+                await createCacheFunc();
+            }
         }
     }
 }
