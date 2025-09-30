@@ -2,6 +2,9 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using TransactionApp.BUSINESS.Concrete;
 using TransactionApp.BUSINESS.MapperConfiguration.AutoMapper;
 using TransactionApp.DAL.Concrete.EntityFramework;
@@ -24,11 +27,15 @@ namespace TransactionApp.INTEGRATION_TESTS.Services
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options;
 
+            var loggerFactory = LoggerFactory.Create(builder => { });
+
             var config = new MapperConfiguration((cfg =>
             {
                 cfg.AddProfile<MapProfile>();
                 cfg.LicenseKey = "<eyJhbGciOiJSUzI1NiIsImtpZCI6Ikx1Y2t5UGVubnlTb2Z0d2FyZUxpY2Vuc2VLZXkvYmJiMTNhY2I1OTkwNGQ4OWI0Y2IxYzg1ZjA4OGNjZjkiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2x1Y2t5cGVubnlzb2Z0d2FyZS5jb20iLCJhdWQiOiJMdWNreVBlbm55U29mdHdhcmUiLCJleHAiOiIxNzkwNjQwMDAwIiwiaWF0IjoiMTc1OTE0Mzg1MiIsImFjY291bnRfaWQiOiIwMTk5OTUxZWMzOWM3ZDZjOWI4ZDc0N2E2YmExMzAzMCIsImN1c3RvbWVyX2lkIjoiY3RtXzAxazZhajl5MWhxa3pqdjhiZ2YyMWFyamE0Iiwic3ViX2lkIjoiLSIsImVkaXRpb24iOiIwIiwidHlwZSI6IjIifQ.zt33jqAZfGYCH7BgaEIovJcMe33Q2fzXDi4XpzoaBZon-RAhdzL-rNkKKpO1iZOh8twT7Ee-X8tL4UKDfGxaxXUTbORK1UO0-geugXxwJUjML51dnZfvv8B4bwIegFqIkeVELdDOoQluF_sZcF5BsjMTmqoHcLWxA7oOW748YWqAMF13zcrJU6z-GlxCbaw5vpi17pNByM7V-VhfFybMld6mMcocb14uot8wZm1KaWc-o8O3K5LcmUuqghMAQrybUE2tAv5jMUfttrbw9NmUJ-ZSOyKRgIc50RTfcghiGMLCkO_ffdvyKKWkjfJ2kijDZl4ZKSw2msZBclRHeQU-5w>";
-            }),null);
+            }),loggerFactory);
+
+
             _mapper = config.CreateMapper();
 
             _cache = new MemoryCache(new MemoryCacheOptions());
@@ -131,7 +138,7 @@ namespace TransactionApp.INTEGRATION_TESTS.Services
             );
 
             // Act
-            var result = await transactionService.TotalAmountPerUser();
+            var result = await transactionService.TotalAmountPerUserAsync();
 
             // Assert
             result.Success.Should().BeTrue();
@@ -140,7 +147,7 @@ namespace TransactionApp.INTEGRATION_TESTS.Services
             result.Data[2].Should().Be(750m); // 500 + 250
 
             // Verify second call uses cache
-            var result2 = await transactionService.TotalAmountPerUser();
+            var result2 = await transactionService.TotalAmountPerUserAsync();
             result2.Message.Should().Contain("retrieved"); // Cache hit message
         }
 
@@ -183,7 +190,7 @@ namespace TransactionApp.INTEGRATION_TESTS.Services
             );
 
             // Act
-            var result = await transactionService.GetHighVolumeTransactions(1000m);
+            var result = await transactionService.GetHighVolumeTransactionsAsync(1000m);
 
             // Assert
             result.Success.Should().BeTrue();
@@ -246,13 +253,13 @@ namespace TransactionApp.INTEGRATION_TESTS.Services
             var allTransactions = await transactionService.GetAllTransactionsAsync();
 
             // Get totals per user
-            var totalsPerUser = await transactionService.TotalAmountPerUser();
+            var totalsPerUser = await transactionService.TotalAmountPerUserAsync();
 
             // Get totals per type
-            var totalsPerType = await transactionService.TotalAmountPerTransaction();
+            var totalsPerType = await transactionService.TotalAmountPerTransactionAsync();
 
             // Get high volume
-            var highVolume = await transactionService.GetHighVolumeTransactions(1500m);
+            var highVolume = await transactionService.GetHighVolumeTransactionsAsync(1500m);
 
             // Assert
             allTransactions.Data.Should().HaveCount(3);
