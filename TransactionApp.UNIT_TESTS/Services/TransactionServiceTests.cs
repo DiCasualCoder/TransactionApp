@@ -146,16 +146,22 @@ namespace TransactionApp.UNIT_TESTS.Services
             };
 
             //Setup Cache with mock data
-            var existingCache = new Dictionary<int, decimal>
+            var existingTotalTransactionPerUserCache = new Dictionary<int, decimal>
             {
                 { 1, 500m }
             };
-            _cache.Set("User_TotalTransactions", existingCache);
+            _cache.Set("User_TotalTransactions", existingTotalTransactionPerUserCache);
+
+            var existingTotalTransactionPerTypeCache = new Dictionary<string, decimal>
+            {
+                { "Debit", 1000m }
+            };
+            _cache.Set("TransactionType_TotalTransactions", existingTotalTransactionPerUserCache);
 
             var userDto = new UserDto { Id = 1, Name = "John", Surname = "Doe" };
             var successUserResult = new SuccessDataResult<UserDto>(userDto, "User found");
 
-            var transactionEntity = new TransactionAddDto { UserId = 1, Amount = 100m };
+            var transactionEntity = new TransactionAddDto { UserId = 1, Amount = 100m, TransactionType = TransactionTypeEnum.Debit };
 
             _mockUserService
                 .Setup(x => x.GetUserByIdAsync(1))
@@ -173,9 +179,14 @@ namespace TransactionApp.UNIT_TESTS.Services
             await _transactionService.AddTransactionAsync(transactionEntity);
 
             //Assert
-            var cachedData = _cache.Get<Dictionary<int, decimal>>("User_TotalTransactions");
-            cachedData.Should().ContainKey(1);
-            cachedData[1].Should().Be(600m);
+            var cachedPerUserData = _cache.Get<Dictionary<int, decimal>>("User_TotalTransactions");
+            cachedPerUserData.Should().ContainKey(1);
+            cachedPerUserData[1].Should().Be(600m); //500 + 100
+
+            var cachedPerTransactionTypeData = _cache.Get<Dictionary<string, decimal>>("TransactionType_TotalTransactions");
+            cachedPerTransactionTypeData.Should().ContainKey("Debit");
+            cachedPerTransactionTypeData["Debit"].Should().Be(1100m); //1000 + 100
+
         }
 
         [Fact]
