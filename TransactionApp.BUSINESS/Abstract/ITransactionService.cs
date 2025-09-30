@@ -6,6 +6,8 @@ namespace TransactionApp.BUSINESS.Abstract
     public interface ITransactionService
     {
         Task<IDataResult<List<TransactionFetchDto>>> GetAllTransactionsAsync();
+
+        Task<IDataResult<TransactionFetchDto>> GetTransactionByIdAsync(int id);
         
         Task<IDataResult<int>> AddTransactionAsync(TransactionAddDto transaction);
 

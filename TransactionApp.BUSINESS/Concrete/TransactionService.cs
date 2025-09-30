@@ -79,6 +79,17 @@ namespace TransactionApp.BUSINESS.Concrete
         }
 
         /// <summary>
+        /// Get transaction by id
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>Transaction</returns>
+        public async Task<IDataResult<TransactionFetchDto>> GetTransactionByIdAsync(int id)
+        {
+            var tranaction = await _transactionRepository.GetByIdAsync(id);
+            return new SuccessDataResult<TransactionFetchDto>(_mapper.Map<TransactionFetchDto>(tranaction), "Transaction retrieved successfully");
+        }
+
+        /// <summary>
         /// Returns total transaction amounts for each user
         /// </summary>
         /// <returns>Per User - Total Amount Dictionary</returns>
