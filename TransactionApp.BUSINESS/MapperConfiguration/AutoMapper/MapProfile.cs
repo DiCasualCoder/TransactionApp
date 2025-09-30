@@ -11,6 +11,7 @@ namespace TransactionApp.BUSINESS.MapperConfiguration.AutoMapper
         {
             //User Profiles
             CreateMap<USER, UserListDto>();
+            CreateMap<USER, UserDto>();
 
             CreateMap<UserCreateDto, USER>();
             CreateMap<UserUpdateDto, USER>();
