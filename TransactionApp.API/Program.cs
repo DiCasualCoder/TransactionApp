@@ -18,6 +18,11 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowOrigin", builder => builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+});
+
 var dbConnectionString = builder.Configuration["ConnectionStrings:DevelopmentDB"];
 
 builder.Services.AddDbContext<TransactionManagerDbContext>(options =>
